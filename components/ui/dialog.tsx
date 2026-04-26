@@ -28,7 +28,7 @@ export function Dialog({ open, onClose, title, children, footer, className }: Di
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center"
       onClick={onClose}
     >
       <div
