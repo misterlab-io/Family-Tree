@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import "./globals.css";
 
 const geist = Geist({
@@ -25,7 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-background text-foreground">{children}</body>
+      <body className="min-h-full bg-background text-foreground">
+        <ReactQueryProvider>{children}</ReactQueryProvider>
+      </body>
     </html>
   );
 }
