@@ -78,6 +78,8 @@ Symmetric relationship types (`spouse`, `ex_spouse`, `sibling`) enforce `person_
 - **Forms** use `react-hook-form` + `zod` schemas. Zod schema is the single source of truth for field validation — don't duplicate rules in the DB layer.
 - **Mobile-first**: minimum 44px tap targets on all interactive elements. `MiniMap` in the tree view is hidden below `md:` breakpoint. Navigation uses `BottomNav` on mobile, sidebar on `md:+`.
 - **Edge colors**: spouse = solid blue, ex_spouse = dashed gray, parent_child = solid black, sibling = solid light blue.
+- **Dialog z-index**: Dialog uses `z-[60]`, above BottomNav (`z-50`). Keep this ordering for any new overlay components.
+- **Next.js Image**: External image domains must be whitelisted in `next.config.ts` → `images.remotePatterns`. Supabase Storage (`*.supabase.co`) is already configured.
 
 ---
 
@@ -89,3 +91,39 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 Set in `.env.local` for local dev, and in Vercel project settings for production.
+
+---
+
+## Build Status
+
+All 5 phases complete. MVP is deployed to Vercel.
+
+| Phase | Status | Summary |
+|---|---|---|
+| 1 — Scaffold + Auth | ✅ | Next.js 15, Supabase auth, middleware, login/register |
+| 2 — Person CRUD | ✅ | lib/db/persons, hooks, PersonForm + photo upload, members pages |
+| 3 — Relationships | ✅ | lib/db/relationships (LEAST/GREATEST), RelationshipForm, detail page |
+| 4 — Tree Visualization | ✅ | layout.ts (couple-node + Dagre), PersonNode, RelationshipEdge, FamilyTreeCanvas |
+| 5 — Polish + Deploy | ✅ | loading.tsx + error.tsx per route, deployed to Vercel |
+
+## Supabase Storage
+
+Bucket `person-photos` must exist with the following policies (run in SQL Editor or set via Dashboard):
+
+```sql
+-- Upload: authenticated users can only write to their own folder
+CREATE POLICY "owner upload" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'person-photos'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Delete: authenticated users can only delete from their own folder
+CREATE POLICY "owner delete" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'person-photos'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
