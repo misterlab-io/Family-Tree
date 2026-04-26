@@ -5,24 +5,47 @@ import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { usePerson, useDeletePerson } from "@/hooks/usePersons";
+import { useEffect, useMemo, useState } from "react";
+import { usePerson, useDeletePerson, usePersons } from "@/hooks/usePersons";
+import {
+  useRelationships,
+  useCreateRelationship,
+  useDeleteRelationship,
+} from "@/hooks/useRelationships";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { RelationshipForm } from "@/components/members/RelationshipForm";
+import { RelationshipList } from "@/components/members/RelationshipList";
 
 export default function PersonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const { data: person, isLoading } = usePerson(id);
+  const { data: persons = [] } = usePersons(userId ?? "");
+  const { data: relationships = [] } = useRelationships(userId ?? "");
   const deletePerson = useDeletePerson(userId ?? "");
+  const createRelationship = useCreateRelationship(userId ?? "");
+  const deleteRelationship = useDeleteRelationship(userId ?? "");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [relDialogOpen, setRelDialogOpen] = useState(false);
 
   useEffect(() => {
     createClient()
       .auth.getUser()
       .then(({ data }) => setUserId(data.user?.id ?? null));
   }, []);
+
+  const personsById = useMemo(() => new Map(persons.map((p) => [p.id, p])), [persons]);
+  const candidates = useMemo(() => persons.filter((p) => p.id !== id), [persons, id]);
+  const personRelationships = useMemo(
+    () =>
+      relationships.filter(
+        (r) => r.person_a_id === id || r.person_b_id === id
+      ),
+    [relationships, id]
+  );
 
   async function handleDelete() {
     if (!confirmDelete) {
@@ -110,6 +133,23 @@ export default function PersonDetailPage() {
         {person.bio && <DetailRow label="Biografi" value={person.bio} />}
       </div>
 
+      {/* Hubungan */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Hubungan</h2>
+          <Button size="sm" variant="outline" onClick={() => setRelDialogOpen(true)}>
+            + Tambah
+          </Button>
+        </div>
+        <RelationshipList
+          currentPersonId={id}
+          relationships={personRelationships}
+          personsById={personsById}
+          onDelete={(rid) => deleteRelationship.mutate(rid)}
+          deletingId={deleteRelationship.isPending ? deleteRelationship.variables : undefined}
+        />
+      </div>
+
       {/* Hapus */}
       <Button
         variant="destructive"
@@ -127,6 +167,21 @@ export default function PersonDetailPage() {
           Batal
         </button>
       )}
+
+      <Dialog
+        open={relDialogOpen}
+        onClose={() => setRelDialogOpen(false)}
+        title="Tambah Hubungan"
+      >
+        <RelationshipForm
+          currentPerson={person}
+          candidates={candidates}
+          onSubmit={async (input) => {
+            await createRelationship.mutateAsync(input);
+            setRelDialogOpen(false);
+          }}
+        />
+      </Dialog>
     </div>
   );
 }
