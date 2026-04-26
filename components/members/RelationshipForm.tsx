@@ -17,6 +17,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const FORM_ID = "relationship-form";
+
 interface RelationshipFormProps {
   currentPerson: Person;
   candidates: Person[]; // semua persons kecuali currentPerson
@@ -29,6 +31,14 @@ const TYPE_LABELS: Record<RelationshipType, string> = {
   ex_spouse: "Mantan pasangan",
   sibling: "Saudara kandung",
 };
+
+export function RelationshipFormFooter({ isSubmitting }: { isSubmitting: boolean }) {
+  return (
+    <Button type="submit" form={FORM_ID} loading={isSubmitting} className="w-full">
+      Hubungkan
+    </Button>
+  );
+}
 
 export function RelationshipForm({
   currentPerson,
@@ -82,7 +92,7 @@ export function RelationshipForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-4">
+    <form id={FORM_ID} onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col gap-4">
       <Select
         label="Tipe Hubungan"
         error={errors.relationship_type?.message}
@@ -122,9 +132,6 @@ export function RelationshipForm({
         ))}
       </Select>
 
-      <Button type="submit" loading={isSubmitting} className="w-full">
-        Hubungkan
-      </Button>
     </form>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { RelationshipForm } from "@/components/members/RelationshipForm";
+import { RelationshipForm, RelationshipFormFooter } from "@/components/members/RelationshipForm";
 import { RelationshipList } from "@/components/members/RelationshipList";
 
 export default function PersonDetailPage() {
@@ -172,6 +172,7 @@ export default function PersonDetailPage() {
         open={relDialogOpen}
         onClose={() => setRelDialogOpen(false)}
         title="Tambah Hubungan"
+        footer={<RelationshipFormFooter isSubmitting={createRelationship.isPending} />}
       >
         <RelationshipForm
           currentPerson={person}
