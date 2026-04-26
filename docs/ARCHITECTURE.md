@@ -80,45 +80,63 @@ app/
     register/page.tsx
   (app)/
     layout.tsx                  # Session check server-side + shell dengan nav
-    tree/page.tsx               # Halaman utama: visualisasi pohon keluarga
+    loading.tsx                 # Fallback spinner untuk semua (app) routes
+    error.tsx                   # Error boundary untuk semua (app) routes
+    tree/
+      page.tsx                  # Halaman utama: visualisasi pohon keluarga
+      loading.tsx
+      error.tsx
     members/
-      page.tsx                  # Daftar semua anggota
-      new/page.tsx
-      [id]/page.tsx
-      [id]/edit/page.tsx
+      page.tsx                  # Daftar semua anggota (server → MembersClient)
+      MembersClient.tsx         # Client component: list + empty state
+      loading.tsx               # Skeleton cards
+      error.tsx
+      new/page.tsx              # Form tambah anggota (client)
+      [id]/page.tsx             # Detail + section Hubungan (client)
+      [id]/edit/page.tsx        # Form edit anggota (client)
     settings/page.tsx
 
 components/
   tree/
-    FamilyTreeCanvas.tsx        # React Flow wrapper + inisialisasi layout
-    PersonNode.tsx              # Custom node: foto, nama, tahun lahir/wafat
+    FamilyTreeCanvas.tsx        # ReactFlow wrapper + Controls + MiniMap + FAB
+    PersonNode.tsx              # Custom node: foto, nama, tahun lahir/wafat, warna gender
+    CoupleNode.tsx              # Node invisible antara pasangan
     RelationshipEdge.tsx        # Custom edge: styling per tipe relasi
-    TreeControls.tsx            # Overlay zoom/pan/fit
   members/
-    PersonForm.tsx              # Form tambah/edit person (RHF + Zod)
-    RelationshipForm.tsx        # Form hubungkan dua person
-    PersonCard.tsx
+    PersonForm.tsx              # Form tambah/edit person (RHF + Zod + foto upload)
+    PersonCard.tsx              # Card untuk list view
+    RelationshipForm.tsx        # Form hubungkan dua person + RelationshipFormFooter
+    RelationshipList.tsx        # Daftar hubungan per person + hapus
+  providers/
+    ReactQueryProvider.tsx      # TanStack Query client provider
   layout/
-    AppHeader.tsx
-    BottomNav.tsx               # Navigasi bawah (mobile); diganti sidebar di md:
+    BottomNav.tsx               # Navigasi bawah (mobile); z-50
+  ui/
+    button.tsx
+    input.tsx
+    select.tsx
+    textarea.tsx
+    dialog.tsx                  # Modal dengan backdrop, ESC, dvh; z-[60]
 
 lib/
   supabase/
     client.ts                   # createBrowserClient — untuk Client Components
     server.ts                   # createServerClient — untuk Server Components & Actions
   db/
-    persons.ts                  # getPersons, createPerson, updatePerson, deletePerson
-    relationships.ts            # getRelationships, createRelationship, deleteRelationship
+    persons.ts                  # getPersons, getPerson, createPerson, updatePerson, deletePerson, uploadPersonPhoto
+    relationships.ts            # getRelationships, createRelationship (canonical ordering), deleteRelationship
   tree/
-    layout.ts                   # Transformasi DB → Dagre → React Flow nodes+edges
-  types.ts                      # Shared TypeScript types
+    layout.ts                   # Transformasi DB → couple nodes → Dagre → React Flow nodes+edges
+  types.ts                      # Person, Relationship, RelationshipType, PersonInsert, dll.
+  utils.ts                      # cn() helper
 
 hooks/
-  useTreeData.ts                # Fetch + transform data untuk React Flow
-  usePersonMutations.ts
-  useRelationshipMutations.ts
+  usePersons.ts                 # usePersons, usePerson, useCreatePerson, useUpdatePerson, useDeletePerson
+  useRelationships.ts           # useRelationships, useCreateRelationship, useDeleteRelationship
+  useTreeData.ts                # Fetch persons + relationships → buildTreeLayout via useMemo
 
 middleware.ts                   # Session refresh Supabase + route guard
+next.config.ts                  # images.remotePatterns untuk Supabase Storage
 supabase/
   migrations/
     0001_initial.sql

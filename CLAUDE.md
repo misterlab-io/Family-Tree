@@ -94,6 +94,17 @@ Set in `.env.local` for local dev, and in Vercel project settings for production
 
 ---
 
+## Current Branch & Session State
+
+Active development branch: `claude/family-tree-phase-2-ZqF7w`
+
+All work from Phase 2–5 is committed on this branch. Key decisions made during implementation:
+- `components/ui/dialog.tsx` dibuat manual (shadcn registry tidak accessible dari environment ini) — ikuti pola yang sama untuk komponen UI baru
+- `ReactQueryProvider` di `components/providers/ReactQueryProvider.tsx` di-wrap di `app/layout.tsx`
+- Halaman members menggunakan pola Server Component → Client Component (`page.tsx` → `MembersClient.tsx`) untuk mendapat `userId` dari server lalu fetch data di client
+- `useRelationships` dan `usePersons` hooks sudah ada dan siap dipakai
+- `docs/PROGRESS.md` belum dibuat di branch ini — akan dibuat di session berikutnya
+
 ## Build Status
 
 All 5 phases complete. MVP is deployed to Vercel.
