@@ -124,6 +124,32 @@ export function buildTreeLayout(
     }
   }
 
+  // ── Sibling chain edges ────────────────────────────────────────────────────
+  // Group children by their shared couple node, sort by birth_date,
+  // then link consecutive siblings with minlen:0 edges so Dagre keeps them
+  // in the same rank and adjacent (prevents siblings from being scattered).
+  const personById = new Map(persons.map((p) => [p.id, p]));
+  const coupleChildren = new Map<string, string[]>();
+  for (const [childId, coupleId] of childToCouple) {
+    if (!coupleId) continue;
+    if (!coupleChildren.has(coupleId)) coupleChildren.set(coupleId, []);
+    coupleChildren.get(coupleId)!.push(childId);
+  }
+  for (const [, siblings] of coupleChildren) {
+    if (siblings.length < 2) continue;
+    siblings.sort((a, b) => {
+      const da = personById.get(a)?.birth_date;
+      const db = personById.get(b)?.birth_date;
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da < db ? -1 : 1;
+    });
+    for (let i = 0; i < siblings.length - 1; i++) {
+      g.setEdge(siblings[i], siblings[i + 1], { weight: 2, minlen: 0 });
+    }
+  }
+
   dagre.layout(g);
 
   // ── 5. Convert to React Flow nodes ────────────────────────────────────────
