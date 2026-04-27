@@ -54,7 +54,10 @@ export function PersonForm({
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: defaultValues?.full_name ?? "",
-      gender: defaultValues?.gender ?? undefined,
+      gender:
+        defaultValues?.gender === "male" || defaultValues?.gender === "female"
+          ? defaultValues.gender
+          : undefined,
       birth_date: defaultValues?.birth_date ?? "",
       death_date: defaultValues?.death_date ?? "",
       birth_place: defaultValues?.birth_place ?? "",
