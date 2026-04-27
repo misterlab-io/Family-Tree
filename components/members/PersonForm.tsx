@@ -14,7 +14,7 @@ import type { Person } from "@/lib/types";
 const schema = z
   .object({
     full_name: z.string().min(1, "Nama lengkap wajib diisi"),
-    gender: z.enum(["male", "female", "non_binary", "unknown"]).optional(),
+    gender: z.enum(["male", "female"]).optional(),
     birth_date: z.string().optional(),
     death_date: z.string().optional(),
     birth_place: z.string().optional(),
@@ -117,8 +117,6 @@ export function PersonForm({
         <option value="">— Pilih —</option>
         <option value="male">Laki-laki</option>
         <option value="female">Perempuan</option>
-        <option value="non_binary">Non-biner</option>
-        <option value="unknown">Tidak diketahui</option>
       </Select>
 
       <Input
