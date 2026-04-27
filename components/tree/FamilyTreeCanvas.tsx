@@ -16,6 +16,7 @@ import { Plus } from "lucide-react";
 import { PersonNode } from "./PersonNode";
 import { CoupleNode } from "./CoupleNode";
 import { RelationshipEdge } from "./RelationshipEdge";
+import { TreeSearch } from "./TreeSearch";
 import { useTreeData } from "@/hooks/useTreeData";
 
 const nodeTypes = {
@@ -95,6 +96,8 @@ function TreeCanvas({ userId }: { userId: string }) {
         zoomable
         pannable
       />
+
+      <TreeSearch persons={persons} />
 
       {/* FAB tambah anggota */}
       <div className="absolute bottom-4 right-4 z-10">
