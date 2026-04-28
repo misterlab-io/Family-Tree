@@ -8,9 +8,12 @@ import {
   BackgroundVariant,
   useReactFlow,
   ReactFlowProvider,
+  useNodesState,
+  type Node,
+  type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PersonNode } from "./PersonNode";
@@ -18,6 +21,7 @@ import { CoupleNode } from "./CoupleNode";
 import { RelationshipEdge } from "./RelationshipEdge";
 import { TreeSearch } from "./TreeSearch";
 import { useTreeData } from "@/hooks/useTreeData";
+import { useSaveTreeLayout } from "@/hooks/useTreeLayout";
 
 const nodeTypes = {
   personNode: PersonNode,
@@ -29,14 +33,68 @@ const edgeTypes = {
 };
 
 function TreeCanvas({ userId }: { userId: string }) {
-  const { nodes, edges, persons, isLoading, isError } = useTreeData(userId);
+  const { nodes: layoutNodes, edges, persons, isLoading, isError } =
+    useTreeData(userId);
+  const { mutate: saveOrder } = useSaveTreeLayout(userId);
   const { fitView } = useReactFlow();
 
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  // originalY: nodeId → y from the latest layout, used to lock y during drag
+  const originalY = useRef<Map<string, number>>(new Map());
+
+  // Sync local node state whenever the computed layout changes.
+  // layoutNodes is memoized in useTreeData — it only gets a new reference when
+  // persons, relationships, or customOrder actually change, so this effect
+  // won't loop even though setNodes triggers a re-render.
   useEffect(() => {
-    if (nodes.length > 0) {
-      setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 50);
+    if (layoutNodes.length === 0) return;
+    setNodes(layoutNodes);
+    const yMap = new Map<string, number>();
+    for (const n of layoutNodes) {
+      yMap.set(n.id, n.position.y);
     }
-  }, [nodes.length, fitView]);
+    originalY.current = yMap;
+    setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 50);
+    // setNodes and fitView are stable refs; only layoutNodes drives re-sync
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutNodes]);
+
+  // Lock y-axis: intercept position changes and restore original y
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const locked = changes.map((change) => {
+        if (change.type === "position" && change.position) {
+          const origY = originalY.current.get(change.id);
+          if (origY !== undefined) {
+            return { ...change, position: { x: change.position.x, y: origY } };
+          }
+        }
+        return change;
+      });
+      onNodesChange(locked);
+    },
+    [onNodesChange]
+  );
+
+  // On drag end: re-rank all persons in this generation by x and persist
+  const handleNodeDragStop = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.id.startsWith("couple_")) return;
+      const origY = originalY.current.get(draggedNode.id);
+      if (origY === undefined) return;
+
+      const sameGen = nodes.filter(
+        (n) =>
+          !n.id.startsWith("couple_") &&
+          originalY.current.get(n.id) === origY
+      );
+      const sorted = [...sameGen].sort((a, b) => a.position.x - b.position.x);
+      const orderMap = new Map<string, number>();
+      sorted.forEach((n, i) => orderMap.set(n.id, i));
+      saveOrder(orderMap);
+    },
+    [nodes, saveOrder]
+  );
 
   if (isLoading) {
     return (
@@ -77,13 +135,13 @@ function TreeCanvas({ userId }: { userId: string }) {
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      onNodesChange={handleNodesChange}
+      onNodeDragStop={handleNodeDragStop}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      nodesDraggable={false}
+      nodesDraggable={true}
       nodesConnectable={false}
       elementsSelectable={false}
-      fitView
-      fitViewOptions={{ padding: 0.15 }}
       minZoom={0.1}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
