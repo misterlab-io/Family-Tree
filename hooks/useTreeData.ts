@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { usePersons } from "@/hooks/usePersons";
 import { useRelationships } from "@/hooks/useRelationships";
+import { useTreeLayout } from "@/hooks/useTreeLayout";
 import { buildTreeLayout } from "@/lib/tree/layout";
 
 export function useTreeData(userId: string) {
@@ -18,9 +19,11 @@ export function useTreeData(userId: string) {
     isError: relsError,
   } = useRelationships(userId);
 
+  const { data: customOrder } = useTreeLayout(userId);
+
   const { nodes, edges } = useMemo(
-    () => buildTreeLayout(persons, relationships),
-    [persons, relationships]
+    () => buildTreeLayout(persons, relationships, customOrder),
+    [persons, relationships, customOrder]
   );
 
   return {

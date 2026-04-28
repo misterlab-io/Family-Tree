@@ -8,9 +8,13 @@ import {
   BackgroundVariant,
   useReactFlow,
   ReactFlowProvider,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type NodeChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PersonNode } from "./PersonNode";
@@ -18,6 +22,7 @@ import { CoupleNode } from "./CoupleNode";
 import { RelationshipEdge } from "./RelationshipEdge";
 import { TreeSearch } from "./TreeSearch";
 import { useTreeData } from "@/hooks/useTreeData";
+import { useSaveTreeLayout } from "@/hooks/useTreeLayout";
 
 const nodeTypes = {
   personNode: PersonNode,
@@ -29,14 +34,71 @@ const edgeTypes = {
 };
 
 function TreeCanvas({ userId }: { userId: string }) {
-  const { nodes, edges, persons, isLoading, isError } = useTreeData(userId);
+  const { nodes: layoutNodes, edges: layoutEdges, persons, isLoading, isError } =
+    useTreeData(userId);
+  const { mutate: saveOrder } = useSaveTreeLayout(userId);
   const { fitView } = useReactFlow();
 
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges] = useEdgesState(layoutEdges);
+
+  // originalY: personId → y-position from latest layout (for y-locking)
+  const originalY = useRef<Map<string, number>>(new Map());
+
+  // Sync when layout changes (new person added, custom order applied, etc.)
   useEffect(() => {
-    if (nodes.length > 0) {
-      setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 50);
+    if (layoutNodes.length === 0) return;
+    setNodes(layoutNodes);
+    setEdges(layoutEdges);
+    const yMap = new Map<string, number>();
+    for (const n of layoutNodes) {
+      yMap.set(n.id, n.position.y);
     }
-  }, [nodes.length, fitView]);
+    originalY.current = yMap;
+    setTimeout(() => fitView({ padding: 0.15, duration: 400 }), 50);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges, fitView]);
+
+  // Intercept position changes to lock y-axis for person nodes
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const locked = changes.map((change) => {
+        if (change.type === "position" && change.position) {
+          const origY = originalY.current.get(change.id);
+          if (origY !== undefined) {
+            return { ...change, position: { x: change.position.x, y: origY } };
+          }
+        }
+        return change;
+      });
+      onNodesChange(locked);
+    },
+    [onNodesChange]
+  );
+
+  // On drag end: compute new x_order for every person in the same generation row
+  const handleNodeDragStop = useCallback(
+    (_: React.MouseEvent, draggedNode: Node) => {
+      if (draggedNode.id.startsWith("couple_")) return;
+      const origY = originalY.current.get(draggedNode.id);
+      if (origY === undefined) return;
+
+      // Collect all person nodes in this generation (same original y)
+      const sameGen = nodes.filter(
+        (n) =>
+          !n.id.startsWith("couple_") &&
+          originalY.current.get(n.id) === origY
+      );
+
+      // Sort by current x position to derive new order
+      const sorted = [...sameGen].sort(
+        (a, b) => a.position.x - b.position.x
+      );
+      const orderMap = new Map<string, number>();
+      sorted.forEach((n, i) => orderMap.set(n.id, i));
+      saveOrder(orderMap);
+    },
+    [nodes, saveOrder]
+  );
 
   if (isLoading) {
     return (
@@ -77,9 +139,11 @@ function TreeCanvas({ userId }: { userId: string }) {
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      onNodesChange={handleNodesChange}
+      onNodeDragStop={handleNodeDragStop}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      nodesDraggable={false}
+      nodesDraggable={true}
       nodesConnectable={false}
       elementsSelectable={false}
       fitView
