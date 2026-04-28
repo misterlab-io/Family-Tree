@@ -10,16 +10,20 @@ import {
 export const TREE_LAYOUT_KEY = (userId: string) =>
   ["treeLayout", userId] as const;
 
+// Defined at module scope so the reference is stable across renders.
+// TanStack Query only re-calls select when the raw query data changes.
+function selectToMap(data: TreeNodePosition[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const row of data) map.set(row.person_id, row.x_order);
+  return map;
+}
+
 export function useTreeLayout(userId: string) {
   return useQuery({
     queryKey: TREE_LAYOUT_KEY(userId),
     queryFn: () => getTreeNodePositions(userId),
     enabled: !!userId,
-    select: (data: TreeNodePosition[]): Map<string, number> => {
-      const map = new Map<string, number>();
-      for (const row of data) map.set(row.person_id, row.x_order);
-      return map;
-    },
+    select: selectToMap,
   });
 }
 
